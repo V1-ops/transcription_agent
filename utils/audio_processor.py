@@ -1,6 +1,11 @@
 import yt_dlp
 import os
-from pydub import AudioSegment
+
+
+def _get_audio_segment():
+    from pydub import AudioSegment
+
+    return AudioSegment
 
 
 DOWNLOAD_DIR = "downloads"
@@ -63,6 +68,7 @@ def download_youtube_audio(url: str, status_cb=None) -> str:
 
 def convert_to_wav(input_path: str) -> str:
     """Convert any audio/video file to WAV format using pydub."""
+    AudioSegment = _get_audio_segment()
     output_path = os.path.splitext(input_path)[0] + "_converted.wav"
     audio = AudioSegment.from_file(input_path)
     audio = audio.set_channels(1).set_frame_rate(16000)  # 16kHz
@@ -71,6 +77,7 @@ def convert_to_wav(input_path: str) -> str:
 # chunking the audio
 
 def chunk_audio(wav_path : str , chunk_minutes : int = 10) -> list:
+    AudioSegment = _get_audio_segment()
     audio = AudioSegment.from_wav(wav_path)
     chunk_ms = chunk_minutes * 60 * 1000 
 

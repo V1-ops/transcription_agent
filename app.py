@@ -1,4 +1,5 @@
 import os
+import sys
 import tempfile
 
 import streamlit as st
@@ -21,6 +22,19 @@ def load_streamlit_secrets_into_env() -> None:
         pass
 
 load_streamlit_secrets_into_env()
+
+if sys.version_info >= (3, 13):
+    st.set_page_config(page_title="AI Meeting Assistant", page_icon="🎥", layout="wide")
+    st.error(
+        "This deployment is running Python "
+        f"{sys.version_info.major}.{sys.version_info.minor}, which is not compatible "
+        "with the current audio pipeline because `pydub` depends on `audioop`, removed in Python 3.13+."
+    )
+    st.info(
+        "In Streamlit Community Cloud, open the app settings or redeploy dialog, go to "
+        "`Advanced settings`, set the Python version to `3.12`, and redeploy."
+    )
+    st.stop()
 
 from utils.audio_processor import process_input
 from core.transcriber import transcribe_all
