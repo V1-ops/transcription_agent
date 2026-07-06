@@ -2,6 +2,7 @@ import os
 import subprocess
 
 import yt_dlp
+from yt_dlp.utils import DownloadError
 
 
 DOWNLOAD_DIR = "downloads"
@@ -129,15 +130,36 @@ def download_youtube_audio(url: str, status_cb=None) -> str:
         "retries": 3,
         "fragment_retries": 3,
         "progress_hooks": [_progress_hook],
+        "http_headers": {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/126.0.0.0 Safari/537.36"
+            )
+        },
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android_vr", "web", "tv_simply"],
+            }
+        },
         "noplaylist": True,
         "quiet": True,
         "no_warnings": True,
     }
 
     _status("Connecting to YouTube...")
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        original_path = ydl.prepare_filename(info)
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            original_path = ydl.prepare_filename(info)
+    except DownloadError as exc:
+        message = str(exc)
+        if "HTTP Error 403" in message or "Forbidden" in message:
+            raise RuntimeError(
+                "YouTube blocked the download request on this deployment. "
+                "Please try uploading the audio/video file directly, or use a different public video URL."
+            ) from exc
+        raise RuntimeError(f"YouTube download failed: {message}") from exc
 
     if not os.path.exists(original_path):
         raise FileNotFoundError(f"YouTube download finished but file was not found: {original_path}")

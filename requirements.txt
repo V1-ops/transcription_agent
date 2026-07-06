@@ -2,7 +2,7 @@
 # Python >= 3.10 recommended
 
 # ── Audio / Video acquisition ─────────────────────────────────────────────────
-yt-dlp>=2024.4.9                  # Download audio from YouTube URLs
+yt-dlp>=2026.7.4                  # Download audio from YouTube URLs
 
 # ── Speech-to-Text (local Whisper) ────────────────────────────────────────────
 openai-whisper>=20231117          # OpenAI Whisper (runs locally)
@@ -32,7 +32,6 @@ tiktoken>=0.7.0                   # Token counting for text splitting
 # ── Streamlit UI ──────────────────────────────────────────────────────────────
 streamlit>=1.35.0
 streamlit-extras>=0.4.0           # Additional Streamlit widgets / utilities
-watchdog>=4.0.0                   # File-change watcher (improves Streamlit hot-reload)
 
 # ── PDF & TXT Export ──────────────────────────────────────────────────────────
 reportlab>=4.2.0                  # PDF generation
