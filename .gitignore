@@ -39,8 +39,13 @@ Thumbs.db
 
 # Downloaded and generated media artifacts
 downloads/
+vector_db/
 *.wav
 *.webm
 *.mp3
 *.m4a
+*.mp4
+*.mov
 *.part
+*_converted.wav
+*_chunk_*.wav

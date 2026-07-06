@@ -7,11 +7,32 @@ DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 # converting a youtube video into a wavfile
-def download_youtube_audio(url: str) -> str:
+def download_youtube_audio(url: str, status_cb=None) -> str:
+    def _status(message: str):
+        if status_cb:
+            status_cb(message)
+
+    def _progress_hook(d):
+        state = d.get("status")
+        if state == "downloading":
+            downloaded = d.get("downloaded_bytes")
+            total = d.get("total_bytes") or d.get("total_bytes_estimate")
+            if downloaded and total:
+                pct = (downloaded / total) * 100
+                _status(f"Downloading from YouTube... {pct:.1f}%")
+            else:
+                _status("Downloading from YouTube...")
+        elif state == "finished":
+            _status("Download complete. Converting to WAV...")
+
     output_path = os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s")
     ydl_opts = {
         "format": "bestaudio/best",
         "outtmpl": output_path,
+        "socket_timeout": 25,
+        "retries": 3,
+        "fragment_retries": 3,
+        "progress_hooks": [_progress_hook],
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
@@ -21,11 +42,22 @@ def download_youtube_audio(url: str) -> str:
         ],
         "noplaylist": True,
         "quiet": True,
+        "no_warnings": True,
     }
+
+    _status("Connecting to YouTube...")
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
-        filename = ydl.prepare_filename(info).replace(".webm", ".wav").replace(".m4a", ".wav")
-    return filename
+        original_name = ydl.prepare_filename(info)
+
+    wav_path = os.path.splitext(original_name)[0] + ".wav"
+    if not os.path.exists(wav_path):
+        raise FileNotFoundError(
+            f"YouTube download finished but WAV file was not found: {wav_path}. "
+            "Check FFmpeg installation and yt-dlp postprocessing output."
+        )
+    _status("YouTube audio prepared.")
+    return wav_path
 
 # converting any audio/video file to wav format 
 
@@ -52,17 +84,25 @@ def chunk_audio(wav_path : str , chunk_minutes : int = 10) -> list:
         chunks.append(chunk_path)
     
     return chunks
-def process_input(source: str) -> list:
+def process_input(source: str, status_cb=None) -> list:
+    def _status(message: str):
+        if status_cb:
+            status_cb(message)
+
     if source.startswith("http://") or source.startswith("https://"):
         print("Detected YouTube URL. Downloading audio...")
-        wav_path = download_youtube_audio(source)
+        _status("Detected YouTube URL.")
+        wav_path = download_youtube_audio(source, status_cb=_status)
     else:
         print("Detected local file. Converting to WAV...")
+        _status("Detected local file. Converting to WAV...")
         wav_path = convert_to_wav(source)
 
     print("Chunking audio...")
+    _status("Chunking audio...")
     chunks = chunk_audio(wav_path)
     print(f"Audio ready — {len(chunks)} chunk(s) created.")
+    _status(f"Audio ready - {len(chunks)} chunk(s) created.")
     return chunks
 
 if __name__ == "__main__":
