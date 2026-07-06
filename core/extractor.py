@@ -1,5 +1,4 @@
-#Actionable items,decisons,questions
-
+#Actionableitems , decision , questions 
 
 from langchain_mistralai import ChatMistralAI
 from langchain_core.prompts import ChatPromptTemplate
