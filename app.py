@@ -4,6 +4,24 @@ import tempfile
 import streamlit as st
 from dotenv import load_dotenv
 
+def load_streamlit_secrets_into_env() -> None:
+    """Mirror Streamlit Cloud secrets into environment variables for shared core modules."""
+    try:
+        secret_keys = [
+            "MISTRAL_API_KEY",
+            "WHISPER_MODEL",
+            "SARVAM_API_KEY",
+            "SARVAM_STT_MODEL",
+        ]
+        for key in secret_keys:
+            if key in st.secrets and key not in os.environ:
+                os.environ[key] = str(st.secrets[key])
+    except Exception:
+        # Local runs may not have Streamlit secrets configured.
+        pass
+
+load_streamlit_secrets_into_env()
+
 from utils.audio_processor import process_input
 from core.transcriber import transcribe_all
 from core.summary import summarize, generate_title
