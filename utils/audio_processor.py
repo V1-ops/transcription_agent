@@ -1,17 +1,108 @@
-import yt_dlp
 import os
+import subprocess
 
-
-def _get_audio_segment():
-    from pydub import AudioSegment
-
-    return AudioSegment
+import yt_dlp
 
 
 DOWNLOAD_DIR = "downloads"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-# converting a youtube video into a wavfile
+
+def _run_command(command: list[str]) -> None:
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True)
+    except FileNotFoundError as exc:
+        raise RuntimeError(
+            "FFmpeg is required but was not found in PATH. Install FFmpeg and try again."
+        ) from exc
+    except subprocess.CalledProcessError as exc:
+        message = exc.stderr.strip() or exc.stdout.strip() or "Unknown FFmpeg error"
+        raise RuntimeError(message) from exc
+
+
+def _probe_duration_seconds(path: str) -> float:
+    command = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        path,
+    ]
+    try:
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
+    except FileNotFoundError as exc:
+        raise RuntimeError(
+            "FFprobe is required but was not found in PATH. Install FFmpeg and try again."
+        ) from exc
+    except subprocess.CalledProcessError as exc:
+        message = exc.stderr.strip() or exc.stdout.strip() or "Unknown FFprobe error"
+        raise RuntimeError(message) from exc
+
+    return float(result.stdout.strip())
+
+
+def _export_wav_segment(input_path: str, output_path: str, start_seconds: float, duration_seconds: float) -> None:
+    command = [
+        "ffmpeg",
+        "-y",
+        "-ss",
+        str(start_seconds),
+        "-t",
+        str(duration_seconds),
+        "-i",
+        input_path,
+        "-ac",
+        "1",
+        "-ar",
+        "16000",
+        "-vn",
+        output_path,
+    ]
+    _run_command(command)
+
+
+def split_wav_file(wav_path: str, chunk_seconds: int, suffix_prefix: str = "_chunk_") -> list[str]:
+    duration_seconds = _probe_duration_seconds(wav_path)
+    if duration_seconds <= 0:
+        raise RuntimeError(f"Could not determine audio duration for {wav_path}")
+
+    chunks = []
+    start_seconds = 0.0
+    index = 0
+
+    while start_seconds < duration_seconds:
+        output_path = f"{wav_path}{suffix_prefix}{index}.wav"
+        segment_duration = min(chunk_seconds, max(duration_seconds - start_seconds, 0))
+        _export_wav_segment(wav_path, output_path, start_seconds, segment_duration)
+        chunks.append(output_path)
+        start_seconds += chunk_seconds
+        index += 1
+
+    return chunks
+
+
+def normalize_to_wav(input_path: str) -> str:
+    """Convert any audio/video file to mono 16kHz WAV using FFmpeg."""
+    output_path = os.path.splitext(input_path)[0] + "_converted.wav"
+    command = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_path,
+        "-ac",
+        "1",
+        "-ar",
+        "16000",
+        "-vn",
+        output_path,
+    ]
+    _run_command(command)
+    return output_path
+
+
 def download_youtube_audio(url: str, status_cb=None) -> str:
     def _status(message: str):
         if status_cb:
@@ -38,13 +129,6 @@ def download_youtube_audio(url: str, status_cb=None) -> str:
         "retries": 3,
         "fragment_retries": 3,
         "progress_hooks": [_progress_hook],
-        "postprocessors": [
-            {
-                "key": "FFmpegExtractAudio",
-                "preferredcodec": "wav",
-                "preferredquality": "192",
-            }
-        ],
         "noplaylist": True,
         "quiet": True,
         "no_warnings": True,
@@ -53,44 +137,20 @@ def download_youtube_audio(url: str, status_cb=None) -> str:
     _status("Connecting to YouTube...")
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
-        original_name = ydl.prepare_filename(info)
+        original_path = ydl.prepare_filename(info)
 
-    wav_path = os.path.splitext(original_name)[0] + ".wav"
-    if not os.path.exists(wav_path):
-        raise FileNotFoundError(
-            f"YouTube download finished but WAV file was not found: {wav_path}. "
-            "Check FFmpeg installation and yt-dlp postprocessing output."
-        )
+    if not os.path.exists(original_path):
+        raise FileNotFoundError(f"YouTube download finished but file was not found: {original_path}")
+
+    wav_path = normalize_to_wav(original_path)
     _status("YouTube audio prepared.")
     return wav_path
 
-# converting any audio/video file to wav format 
 
-def convert_to_wav(input_path: str) -> str:
-    """Convert any audio/video file to WAV format using pydub."""
-    AudioSegment = _get_audio_segment()
-    output_path = os.path.splitext(input_path)[0] + "_converted.wav"
-    audio = AudioSegment.from_file(input_path)
-    audio = audio.set_channels(1).set_frame_rate(16000)  # 16kHz
-    audio.export(output_path, format="wav")
-    return output_path
-# chunking the audio
+def chunk_audio(wav_path: str, chunk_minutes: int = 10) -> list[str]:
+    return split_wav_file(wav_path, chunk_seconds=chunk_minutes * 60, suffix_prefix="_chunk_")
 
-def chunk_audio(wav_path : str , chunk_minutes : int = 10) -> list:
-    AudioSegment = _get_audio_segment()
-    audio = AudioSegment.from_wav(wav_path)
-    chunk_ms = chunk_minutes * 60 * 1000 
 
-    chunks = []
-
-    for i, start in enumerate(range(0,len(audio),chunk_ms)):
-        chunk = audio[start : start + chunk_ms]
-        chunk_path = f"{wav_path}_chunk_{i}.wav"
-        chunk.export(chunk_path , format = "wav")
-
-        chunks.append(chunk_path)
-    
-    return chunks
 def process_input(source: str, status_cb=None) -> list:
     def _status(message: str):
         if status_cb:
@@ -103,17 +163,17 @@ def process_input(source: str, status_cb=None) -> list:
     else:
         print("Detected local file. Converting to WAV...")
         _status("Detected local file. Converting to WAV...")
-        wav_path = convert_to_wav(source)
+        wav_path = normalize_to_wav(source)
 
     print("Chunking audio...")
     _status("Chunking audio...")
     chunks = chunk_audio(wav_path)
-    print(f"Audio ready — {len(chunks)} chunk(s) created.")
+    print(f"Audio ready - {len(chunks)} chunk(s) created.")
     _status(f"Audio ready - {len(chunks)} chunk(s) created.")
     return chunks
+
 
 if __name__ == "__main__":
     url = "https://www.youtube.com/watch?v=0OpImRKSYPc"
     final_chunks = process_input(url)
     print(final_chunks)
-

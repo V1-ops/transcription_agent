@@ -1,9 +1,9 @@
 import os
-import sys
 import tempfile
 
 import streamlit as st
 from dotenv import load_dotenv
+
 
 def load_streamlit_secrets_into_env() -> None:
     """Mirror Streamlit Cloud secrets into environment variables for shared core modules."""
@@ -21,20 +21,8 @@ def load_streamlit_secrets_into_env() -> None:
         # Local runs may not have Streamlit secrets configured.
         pass
 
-load_streamlit_secrets_into_env()
 
-if sys.version_info >= (3, 13):
-    st.set_page_config(page_title="AI Meeting Assistant", page_icon="🎥", layout="wide")
-    st.error(
-        "This deployment is running Python "
-        f"{sys.version_info.major}.{sys.version_info.minor}, which is not compatible "
-        "with the current audio pipeline because `pydub` depends on `audioop`, removed in Python 3.13+."
-    )
-    st.info(
-        "In Streamlit Community Cloud, open the app settings or redeploy dialog, go to "
-        "`Advanced settings`, set the Python version to `3.12`, and redeploy."
-    )
-    st.stop()
+load_streamlit_secrets_into_env()
 
 from utils.audio_processor import process_input
 from core.transcriber import transcribe_all
@@ -46,62 +34,52 @@ load_dotenv()
 
 st.set_page_config(page_title="AI Meeting Assistant", page_icon="🎥", layout="wide")
 
-# ----------------------------------------------------------------------------
-# Session state
-# ----------------------------------------------------------------------------
-# Streamlit reruns the ENTIRE script top-to-bottom on every interaction
-# (button click, tab switch, chat message, etc). Without session_state,
-# your pipeline results and chat history would vanish on every rerun.
 if "result" not in st.session_state:
     st.session_state.result = None
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 
-# ----------------------------------------------------------------------------
-# Pipeline runner with live progress feedback
-# ----------------------------------------------------------------------------
 def run_pipeline(source: str, language: str) -> dict:
     status = st.empty()
     progress = st.progress(0)
 
-    status.info("🎬 Processing audio/video input...")
+    status.info("Processing audio/video input...")
 
     def on_audio_status(message: str):
-        status.info(f"🎬 {message}")
+        status.info(message)
 
     try:
         chunks = process_input(source, status_cb=on_audio_status)
     except TypeError:
-        # Backward compatibility if an older audio_processor is imported.
         chunks = process_input(source)
     progress.progress(25)
 
-    status.info("📝 Transcribing audio...")
+    status.info("Transcribing audio...")
     transcript = transcribe_all(chunks, language)
     progress.progress(55)
 
-    status.info("🏷️ Generating title...")
+    status.info("Generating title...")
     title = generate_title(transcript)
     progress.progress(65)
 
-    status.info("📋 Generating summary...")
+    status.info("Generating summary...")
     summary = summarize(transcript)
     progress.progress(75)
 
-    status.info("✅ Extracting action items...")
+    status.info("Extracting action items...")
     action_items = extract_action_items(transcript)
     progress.progress(82)
 
-    status.info("🔑 Extracting key decisions...")
+    status.info("Extracting key decisions...")
     decisions = extract_key_decisions(transcript)
     progress.progress(88)
 
-    status.info("❓ Extracting open questions...")
+    status.info("Extracting open questions...")
     questions = extract_questions(transcript)
     progress.progress(94)
 
-    status.info("🔗 Building RAG index for chat...")
+    status.info("Building RAG index for chat...")
     rag_chain = build_rag_chain(transcript)
     progress.progress(100)
 
@@ -119,11 +97,8 @@ def run_pipeline(source: str, language: str) -> dict:
     }
 
 
-# ----------------------------------------------------------------------------
-# Sidebar — inputs and controls
-# ----------------------------------------------------------------------------
 with st.sidebar:
-    st.title("🎥 AI Audio Assistant")
+    st.title("AI Audio Assistant")
     st.caption("Turn a recording into a summary, action items, and a chat you can query.")
 
     st.divider()
@@ -138,8 +113,6 @@ with st.sidebar:
     else:
         uploaded = st.file_uploader("Upload audio/video", type=["mp4", "mp3", "wav", "m4a", "mov"])
         if uploaded is not None:
-            # process_input() expects a path/source string, not an in-memory
-            # UploadedFile object, so we persist it to a temp file on disk first.
             suffix = os.path.splitext(uploaded.name)[1]
             with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
                 tmp.write(uploaded.read())
@@ -148,7 +121,7 @@ with st.sidebar:
     language = st.selectbox("Language", ["english", "hinglish"])
 
     run_clicked = st.button(
-        "🚀 Process Audio",
+        "Process Audio",
         type="primary",
         use_container_width=True,
         disabled=not source,
@@ -156,15 +129,12 @@ with st.sidebar:
 
     if st.session_state.result:
         st.divider()
-        if st.button("🔄 Start a new meeting", use_container_width=True):
+        if st.button("Start a new meeting", use_container_width=True):
             st.session_state.result = None
             st.session_state.messages = []
             st.rerun()
 
 
-# ----------------------------------------------------------------------------
-# Trigger pipeline
-# ----------------------------------------------------------------------------
 if run_clicked and source:
     try:
         st.session_state.result = run_pipeline(source, language)
@@ -174,25 +144,22 @@ if run_clicked and source:
 
 result = st.session_state.result
 
-# ----------------------------------------------------------------------------
-# Main area
-# ----------------------------------------------------------------------------
 if result is None:
-    st.title("🎥 AI Audio Assistant")
+    st.title("AI Audio Assistant")
     st.write(
         "Provide a YouTube URL, local file path, or upload a recording in the "
-        "sidebar, then click **Process Meeting**."
+        "sidebar, then click **Process Audio**."
     )
     st.info(
         "You'll get a title, summary, action items, key decisions, open "
         "questions, the full transcript, and a chat tab to ask questions "
-        "about the meeting."
+        "about the audio."
     )
 else:
-    st.title(f"📌 {result['title']}")
+    st.title(result["title"])
 
     tab_summary, tab_actions, tab_decisions, tab_questions, tab_transcript, tab_chat = st.tabs(
-        ["📋 Summary", "✅ Action Items", "🔑 Key Decisions", "❓ Open Questions", "📄 Transcript", "💬 Chat"]
+        ["Summary", "Action Items", "Key Decisions", "Open Questions", "Transcript", "Chat"]
     )
 
     with tab_summary:
@@ -210,15 +177,14 @@ else:
     with tab_transcript:
         st.text_area("Full transcript", result["transcript"], height=500)
         st.download_button(
-            "⬇️ Download transcript",
+            "Download transcript",
             result["transcript"],
             file_name="transcript.txt",
         )
 
     with tab_chat:
-        st.caption("Ask questions about this Audio — answers are grounded in the transcript via RAG.")
+        st.caption("Ask questions about this audio. Answers are grounded in the transcript via RAG.")
 
-        # Replay prior turns so the chat log survives reruns
         for msg in st.session_state.messages:
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
