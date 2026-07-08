@@ -3,31 +3,25 @@
 
 # ── Audio / Video acquisition ─────────────────────────────────────────────────
 yt-dlp>=2026.7.4                  # Download audio from YouTube URLs
+pydub>=0.25.1                     # Audio conversion and chunking (requires FFmpeg)
 
-# ── Speech-to-Text (local Whisper) ────────────────────────────────────────────
-openai-whisper>=20231117          # OpenAI Whisper (runs locally)
-numba>=0.60.0                     # Ensures Python 3.12-compatible llvmlite wheels
-llvmlite>=0.43.0                  # Prevents legacy llvmlite source builds (e.g., 0.36.0)
-torch>=2.2.0                      # PyTorch backend for Whisper
-torchaudio>=2.2.0                 # Audio utilities for PyTorch
-
-# ── Translation (Hindi → English) ─────────────────────────────────────────────
-deep-translator>=1.11.4           # Lightweight translation wrapper (Google backend)
+# ── Speech-to-Text (Hugging Face Inference + Sarvam fallback) ────────────────
+# English   → Hugging Face Inference API (HF_TOKEN)
+# Hinglish  → Sarvam (SARVAM_API_KEY, signup credits)
+huggingface_hub>=0.36.2           # InferenceClient for hosted ASR
 
 # ── LLM Orchestration — LangChain LCEL + Mistral ──────────────────────────────
 langchain>=0.2.0
 langchain-core>=0.2.0
 langchain-community>=0.2.0
-langchain-mistralai>=1.1.5        # Avoids older release ranges with legacy resolver conflicts
+langchain-mistralai>=1.1.5        # Mistral LLM + embeddings API
 mistralai>=0.4.0                  # Official Mistral Python client
 
 # ── RAG Pipeline ──────────────────────────────────────────────────────────────
 chromadb>=0.5.0                   # Local vector store
 langchain-chroma>=0.1.2           # Chroma integration used by core/vectore_store.py
-sentence-transformers>=3.0.0      # HuggingFace embedding models
-langchain-huggingface>=0.0.3      # LangChain ↔ HuggingFace embeddings bridge
-huggingface-hub>=0.23.0           # Model downloading from HuggingFace Hub
 tiktoken>=0.7.0                   # Token counting for text splitting
+fastembed>=0.4.0                  # ONNX embeddings (replaces torch-heavy sentence-transformers)
 
 # ── Streamlit UI ──────────────────────────────────────────────────────────────
 streamlit>=1.35.0

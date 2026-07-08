@@ -33,37 +33,61 @@ def run_pipeline(source: str, language: str) -> dict:
     status = st.empty()
     progress = st.progress(0)
 
-    status.info("🎬 Processing audio/video input...")
-    chunks = process_input(source)
-    progress.progress(15)
+    try:
+        status.info("🎬 Processing audio/video input...")
+        chunks = process_input(source)
+        progress.progress(15)
+    except Exception as e:
+        raise RuntimeError(f"Audio preparation failed: {e}") from e
 
-    status.info("📝 Transcribing audio...")
-    transcript = transcribe_all(chunks, language)
-    progress.progress(40)
+    try:
+        status.info("📝 Transcribing audio...")
+        transcript = transcribe_all(chunks, language)
+        progress.progress(40)
+    except Exception as e:
+        raise RuntimeError(f"Transcription failed: {e}") from e
 
-    status.info("🏷️ Generating title...")
-    title = generate_title(transcript)
-    progress.progress(50)
+    try:
+        status.info("🏷️ Generating title...")
+        title = generate_title(transcript)
+        progress.progress(50)
+    except Exception as e:
+        raise RuntimeError(f"Title generation failed: {e}") from e
 
-    status.info("📋 Generating summary...")
-    summary = summarize(transcript)
-    progress.progress(65)
+    try:
+        status.info("📋 Generating summary...")
+        summary = summarize(transcript)
+        progress.progress(65)
+    except Exception as e:
+        raise RuntimeError(f"Summary generation failed: {e}") from e
 
-    status.info("✅ Extracting action items...")
-    action_items = extract_action_items(transcript)
-    progress.progress(75)
+    try:
+        status.info("✅ Extracting action items...")
+        action_items = extract_action_items(transcript)
+        progress.progress(75)
+    except Exception as e:
+        raise RuntimeError(f"Action item extraction failed: {e}") from e
 
-    status.info("🔑 Extracting key decisions...")
-    decisions = extract_key_decisions(transcript)
-    progress.progress(85)
+    try:
+        status.info("🔑 Extracting key decisions...")
+        decisions = extract_key_decisions(transcript)
+        progress.progress(85)
+    except Exception as e:
+        raise RuntimeError(f"Decision extraction failed: {e}") from e
 
-    status.info("❓ Extracting open questions...")
-    questions = extract_questions(transcript)
-    progress.progress(92)
+    try:
+        status.info("❓ Extracting open questions...")
+        questions = extract_questions(transcript)
+        progress.progress(92)
+    except Exception as e:
+        raise RuntimeError(f"Open question extraction failed: {e}") from e
 
-    status.info("🔗 Building RAG index for chat...")
-    rag_chain = build_rag_chain(transcript)
-    progress.progress(100)
+    try:
+        status.info("🔗 Building RAG index for chat...")
+        rag_chain = build_rag_chain(transcript)
+        progress.progress(100)
+    except Exception as e:
+        raise RuntimeError(f"RAG index build failed: {e}") from e
 
     status.empty()
     progress.empty()

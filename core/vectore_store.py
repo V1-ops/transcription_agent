@@ -55,4 +55,3 @@ def get_retriever(vector_store : Chroma, k :int = 4):
         search_type = 'similarity',
         search_kwargs = {"k":k}
     )
-

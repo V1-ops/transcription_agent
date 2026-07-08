@@ -25,9 +25,9 @@ Teams spend a lot of time manually reviewing recordings, writing notes, and chas
 - Audio preprocessing pipeline
   - Downloads audio from YouTube using `yt-dlp`
   - Converts media to mono `16kHz` WAV using `pydub` and FFmpeg
-  - Splits long recordings into manageable chunks
+  - Splits long recordings into deployment-friendly chunks
 - Flexible transcription engine
-  - Local OpenAI Whisper for English transcription
+  - Hugging Face Inference API for English transcription
   - Sarvam AI speech-to-text translation pipeline for Hinglish audio
 - LLM-powered meeting intelligence
   - Meeting title generation
@@ -45,7 +45,7 @@ Teams spend a lot of time manually reviewing recordings, writing notes, and chas
 1. Provide a YouTube URL, local file path, or upload a recording.
 2. The app downloads or converts the media into WAV format.
 3. Audio is chunked for scalable transcription.
-4. The transcript is generated using Whisper or Sarvam.
+4. The transcript is generated using Hugging Face ASR or Sarvam.
 5. Mistral-powered chains produce a title, summary, action items, decisions, and open questions.
 6. The transcript is indexed in ChromaDB.
 7. Users can ask natural-language questions grounded in the meeting transcript.
@@ -69,7 +69,7 @@ Input Source
 - `Streamlit` for the frontend
 - `yt-dlp` for YouTube audio extraction
 - `pydub` + `FFmpeg` for audio conversion and chunking
-- `openai-whisper` for local speech-to-text
+- `huggingface_hub` `InferenceClient` for hosted speech-to-text
 - `Sarvam AI` for Hinglish transcription + translation
 - `LangChain` for orchestration
 - `Mistral AI` for title generation, summarization, and extraction
@@ -88,7 +88,7 @@ video summarizer/
 |   |-- extractor.py          # Action items, decisions, open questions
 |   |-- Rag_pipeline.py       # RAG chain construction and chat querying
 |   |-- summary.py            # Title generation and transcript summarization
-|   |-- transcriber.py        # Whisper + Sarvam transcription routing
+|   |-- transcriber.py        # Hugging Face + Sarvam transcription routing
 |   `-- vectore_store.py      # ChromaDB vector store utilities
 |-- utils/
 |   `-- audio_processor.py    # Downloading, conversion, chunking
@@ -143,7 +143,11 @@ Create a `.env` file in the project root:
 
 ```env
 MISTRAL_API_KEY=your_mistral_api_key
-WHISPER_MODEL=small
+HF_TOKEN=your_huggingface_token
+HF_PROVIDER=hf-inference
+HF_ASR_MODEL=
+HF_TIMEOUT_SECONDS=300
+TRANSCRIPTION_CHUNK_MINUTES=10
 SARVAM_API_KEY=your_sarvam_api_key
 SARVAM_STT_MODEL=saaras:v2.5
 ```
@@ -217,7 +221,7 @@ If you want to present this project on your resume, these are the strongest tech
 
 - Built an end-to-end AI meeting assistant that transforms raw audio/video into structured summaries, action items, decisions, and transcript-grounded Q&A.
 - Integrated multimodal preprocessing with YouTube ingestion, WAV conversion, and chunk-based transcription for long-form recordings.
-- Implemented a hybrid transcription workflow using local Whisper for English and Sarvam AI for Hinglish speech-to-text translation.
+- Implemented a hybrid transcription workflow using Hugging Face hosted ASR for English and Sarvam AI for Hinglish speech-to-text translation.
 - Designed a retrieval-augmented generation pipeline using LangChain, sentence-transformer embeddings, and ChromaDB for contextual chat over meeting transcripts.
 - Developed both a Streamlit web interface and a CLI workflow to support interactive and developer-friendly usage.
 
