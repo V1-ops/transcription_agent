@@ -247,23 +247,12 @@ If you want to present this project on your resume, these are the strongest tech
 - Support meeting history and transcript search across sessions
 - Add cost/performance controls for different LLM and embedding backends
 
-## Notes for GitHub Presentation
 
-To make this repository look strong on GitHub:
 
-- add screenshots or a short demo GIF of the Streamlit interface
-- include a sample transcript and sample output in a `samples/` folder
-- add an `.env.example` file with placeholder values only
-- avoid committing secrets or generated local database artifacts unless intentional
-
-## License
-
-You can add your preferred license here, for example `MIT`.
 
 ## Author
 
-Replace this section with your name and links:
-
-- Name: `Your Name`
-- GitHub: `https://github.com/your-username`
-- LinkedIn: `https://linkedin.com/in/your-profile`
+- Name: Vanshdeep Singh Lamba
+- GitHub: `https://github.com/V1-ops`
+- LinkedIn: `https://linkedin.com/in/vanshdeepsinghlamba`
+ 
